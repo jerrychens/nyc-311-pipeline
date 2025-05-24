@@ -1,0 +1,18 @@
+name: 'nyc311_project'
+version: '1.0'
+profile: 'nyc311'   # 對應到 profiles.yml 的 profile 名稱
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_modules"]
+
+models:
+  nyc311_project:
+    staging:
+      materialized: view     # 原始來源建成 view
+    views:
+      materialized: view     # 常變動的報表也用 view
+    marts:
+      materialized: table    # 聚合資料建成 table（但注意會變成靜態，需主動 refresh）
+
+test-paths: ["tests"]

@@ -1,0 +1,81 @@
+version: '3.7'
+
+services:
+  postgres:
+    image: postgres:13
+    platform: linux/amd64 # 官方映像預設只支援 x86_64，ARM 架構不穩
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # PostgreSQL 的資料持久化（volume)
+
+  airflow-webserver:
+    image: apache/airflow:2.7.2
+    platform: linux/amd64 # 雖然官方支援多平台，但有些套件（如 psycopg2-binary）在 ARM 上會出錯
+    user: "0:0"
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
+      AIRFLOW__CONNECTIONS__DOCKER_DEFAULT: '{"conn_type": "docker", "host": "unix://var/run/docker.sock"}'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt   # 新增這行，for dbt run, dbt test under airflow
+      - /var/run/docker.sock:/var/run/docker.sock  
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.7.2 
+    platform: linux/amd64  # 雖然官方支援多平台，但有些套件（如 psycopg2-binary）在 ARM 上會出錯
+    user: "0:0"
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
+      AIRFLOW__CONNECTIONS__DOCKER_DEFAULT: '{"conn_type": "docker", "host": "unix://var/run/docker.sock"}'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt   # 新增這行，for dbt run, dbt test under airflow
+      - /var/run/docker.sock:/var/run/docker.sock  
+    command: scheduler
+
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.8.1 #1.6.6
+    platform: linux/amd64
+    volumes:
+      - ./dbt:/usr/app
+    working_dir: /usr/app
+    environment:
+      DBT_PROFILES_DIR: /usr/app
+    depends_on:
+      - postgres
+    entrypoint: ["tail", "-f", "/dev/null"] # 先不執行指令，方便 exec 進去跑 dbt
+
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: jupyterlab
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/home/jovyan/work  # 🔥 重點：整個專案 root mount 到容器內
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+    working_dir: /home/jovyan/work
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata: # PostgreSQL 的資料持久化（volume)

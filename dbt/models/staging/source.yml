@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: public           # schema 名稱
+    tables:
+      - name: nyc_311      # 資料表名稱
+        description: "Raw 311 complaint data loaded by Airflow"

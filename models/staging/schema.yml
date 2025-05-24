@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: stg_nyc_311
+    description: "Staging table for raw NYC 311 data"
+    columns:
+      - name: unique_key
+        description: "Primary key of complaint"
+        tests:
+          - not_null
+          - unique
+
+      - name: created_date
+        description: "Datetime when complaint was filed"
+        tests:
+          - not_null
+
+      - name: complaint_type
+        description: "Type of complaint"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Noise', 'Illegal Parking', 'Blocked Driveway']
+              # quote: true
+              # warn_if: "> 0"   # You can remove this line if you want to treat it as error
+              config:
+                severity: warn
+
+      - name: latitude
+        tests:
+          - not_null
+
+      - name: longitude
+        tests:
+          - not_null
