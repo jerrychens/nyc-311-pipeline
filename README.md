@@ -24,7 +24,7 @@ This is a modern data engineering project that builds an end-to-end ETL pipeline
 2. Clone this repository and create a `.env` file:
 
 ```bash
-git clone https://github.com/<your-username>/nyc-311-pipeline.git
+git clone https://github.com/jerrychens/nyc-311-pipeline.git
 cd nyc-311-pipeline
 cp .env.example .env
 ```
